@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raseef | Warehouse SQL Agent</title>
+<style>
+:root{
+  --concrete:#D8DDDE; --slab:#E9ECEB; --ink:#18222C; --ink-2:#4A5762; --line:#B3BBBE;
+  --steel:#35617F; --amber:#EFA400; --stop:#BF3A2D; --go:#2E7D5A;
+  --sans:Bahnschrift,"Segoe UI",system-ui,sans-serif;
+  --mono:"Cascadia Mono",Consolas,"SFMono-Regular",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--concrete);color:var(--ink);font:15px/1.5 var(--sans);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px);background-size:100% 64px;background-attachment:local}
+button,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--steel);outline-offset:2px}
+
+/* masthead */
+.mast{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+  padding:28px clamp(16px,4vw,48px) 18px;border-bottom:4px solid var(--ink);background:var(--concrete)}
+.word{display:flex;align-items:baseline;gap:16px}
+.word b{font-size:64px;line-height:.9;font-weight:800;letter-spacing:-.01em}
+.word span{font-variation-settings:"wdth" 80;font-size:20px;color:var(--ink-2);max-width:22ch;line-height:1.15}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:2px solid var(--ink);padding:3px 10px;font:13px var(--mono);background:var(--slab)}
+.chip i{font-style:normal;color:var(--ink-2)}
+
+/* layout */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:28px;padding:28px clamp(16px,4vw,48px) 64px;max-width:1500px}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--slab);border:2px solid var(--ink)}
+.panel>h2{margin:0;padding:8px 14px;font-size:15px;font-weight:700;border-bottom:2px solid var(--ink);background:var(--ink);color:var(--slab)}
+.pad{padding:14px}
+
+/* ask form */
+.ask textarea{width:100%;min-height:92px;resize:vertical;border:0;background:transparent;padding:14px;font-size:20px;line-height:1.35}
+.ask textarea::placeholder{color:#7C8A94}
+.ask .bar{display:flex;justify-content:space-between;align-items:center;border-top:2px dashed var(--line);padding:10px 14px;gap:12px}
+.ask .hint{color:var(--ink-2);font-size:13px}
+.go-btn{background:var(--amber);border:2px solid var(--ink);padding:8px 22px;font-weight:700;cursor:pointer;box-shadow:4px 4px 0 var(--ink)}
+.go-btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.go-btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.go-btn:disabled{background:var(--line);cursor:progress;box-shadow:none}
+
+/* conveyor */
+.line{margin-top:22px}
+.track{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:0;padding:34px 8px 12px}
+.track::before{content:"";position:absolute;left:10%;right:10%;top:56px;height:6px;background:repeating-linear-gradient(90deg,var(--ink) 0 14px,transparent 14px 22px)}
+.bay{position:relative;text-align:center;padding:0 4px}
+.bay .box{height:46px;margin:0 auto;width:min(100%,128px);border:2px solid var(--ink);background:var(--slab);display:grid;place-items:center;font-weight:700;font-size:14px;transition:background .2s,border-color .2s}
+.bay .ms{display:block;margin-top:6px;font:12px var(--mono);color:var(--ink-2);min-height:18px}
+.bay.done .box{background:var(--go);color:#fff;border-color:var(--ink)}
+.bay.fail .box{background:var(--stop);color:#fff}
+.bay.closed .box{background:repeating-linear-gradient(-45deg,var(--amber) 0 10px,var(--ink) 10px 20px);color:#fff;text-shadow:0 0 4px #000,0 0 4px #000}
+.bay .retry{position:absolute;top:-4px;right:6px;background:var(--amber);border:2px solid var(--ink);font:12px var(--mono);padding:0 6px;display:none}
+.bay.again .retry{display:block}
+.parcel{position:absolute;top:23px;left:10%;width:30px;height:26px;margin-left:-15px;background:#C9A06A;border:2px solid var(--ink);
+  transition:left .45s cubic-bezier(.6,.05,.3,1),background .2s;z-index:2}
+.parcel::after{content:"";position:absolute;left:11px;top:-2px;width:4px;bottom:-2px;background:rgba(255,255,255,.55)}
+.parcel.bad{background:var(--stop)}
+.parcel.hide{visibility:hidden}
+.steplog{margin:0;padding:10px 14px;border-top:2px dashed var(--line);font:12.5px/1.6 var(--mono);color:var(--ink-2);min-height:44px;list-style:none}
+.steplog li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.steplog li.x{color:var(--stop)}
+.steplog b{color:var(--ink);font-weight:600}
+
+/* results */
+#out{margin-top:22px;display:grid;gap:22px}
+.answer{border:2px solid var(--ink);background:var(--slab);padding:16px 18px 18px;position:relative}
+.answer::before{content:"";position:absolute;left:-2px;right:-2px;top:-9px;height:9px;
+  background:radial-gradient(circle at 8px 9px,transparent 6px,var(--ink) 6.5px 8px,transparent 8.5px) 0 0/16px 9px repeat-x}
+.answer p{margin:0;font-size:22px;line-height:1.35}
+.answer.ok{border-left:10px solid var(--go)}
+.answer.rejected{border-left:10px solid var(--stop);background:#F3DEDA}
+.answer.failed,.answer.unsupported{border-left:10px solid var(--amber)}
+.facts{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.facts b{color:var(--ink);font-family:var(--mono);font-weight:600;margin-left:6px}
+.code{margin:0;padding:14px;overflow:auto;font:13.5px/1.55 var(--mono);background:var(--ink);color:#DCE3E8;white-space:pre}
+.code .k{color:#8EC5E8;font-weight:600}.code .s{color:#9BD6A8}.code .n{color:var(--amber)}.code .c{color:#7E8B94}
+.panel>h2{display:flex;justify-content:space-between;align-items:center}
+.mini{background:transparent;border:1px solid var(--slab);color:var(--slab);padding:1px 10px;font-size:12px;cursor:pointer}
+.mini:hover{background:var(--slab);color:var(--ink)}
+.tablewrap{overflow:auto;max-height:420px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{position:sticky;top:0;background:var(--concrete);text-align:left;padding:7px 12px;border-bottom:2px solid var(--ink);font-weight:700;white-space:nowrap}
+td{padding:6px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+tbody tr:nth-child(even){background:rgba(0,0,0,.035)}
+.bars{padding:12px 14px;display:grid;gap:5px;border-top:2px dashed var(--line)}
+.bar-row{display:grid;grid-template-columns:minmax(90px,200px) 1fr 90px;gap:10px;align-items:center;font-size:13px}
+.bar-row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row i{display:block;height:14px;background:var(--steel);transform-origin:left;animation:grow .5s ease-out both}
+.bar-row em{font:12.5px var(--mono);font-style:normal;text-align:right}
+@keyframes grow{from{transform:scaleX(0)}}
+.empty{padding:22px 18px;color:var(--ink-2)}
+.empty b{display:block;color:var(--ink);font-size:18px;margin-bottom:4px}
+
+/* side rail */
+aside{display:grid;gap:22px;align-content:start}
+.board .row{padding:10px 14px;border-bottom:1px solid var(--line)}
+.board .row:last-child{border-bottom:0}
+.board .top{display:flex;justify-content:space-between;font-weight:600}
+.board .top small{font:12px var(--mono);color:var(--ink-2);font-weight:400}
+.meter{height:10px;background:var(--concrete);margin-top:6px;border:1px solid var(--ink)}
+.meter i{display:block;height:100%;background:var(--amber)}
+.facts-list{margin:0;padding:10px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;border-top:2px solid var(--ink);font-size:14px}
+.facts-list dt{color:var(--ink-2)}.facts-list dd{margin:0;font:600 14px var(--mono)}
+.facts-list dd.warn{color:var(--stop)}
+.ask-list,.hist{list-style:none;margin:0;padding:0}
+.ask-list button,.hist button{display:block;width:100%;text-align:start;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 14px;cursor:pointer}
+.ask-list button:hover,.hist button:hover{background:var(--concrete)}
+.ask-list li:last-child button,.hist li:last-child button{border-bottom:0}
+.ask-list .danger{color:var(--stop);font-weight:600}
+.hist button{display:flex;gap:10px;align-items:center;font-size:14px}
+.hist i{width:10px;height:10px;flex:none;background:var(--go)}
+.hist i.rejected{background:var(--stop)}.hist i.failed,.hist i.unsupported{background:var(--amber)}
+.hist span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="mast">
+  <div class="word"><b>رصيف</b><span>Ask the warehouse in Arabic or English</span></div>
+  <div class="chips" id="chips"></div>
+</header>
+
+<div class="grid">
+<main>
+  <form class="panel ask" id="form">
+    <textarea id="q" dir="auto" placeholder="مثال: شو الأصناف اللي رح تخلص هالأسبوع؟   |   Which products are below their reorder level?" aria-label="Your question"></textarea>
+    <div class="bar"><span class="hint">Ctrl + Enter to run</span><button class="go-btn" id="run" type="submit">Run query</button></div>
+  </form>
+
+  <section class="panel line" aria-label="Agent pipeline">
+    <h2>Agent line</h2>
+    <div class="track" id="track">
+      <div class="parcel hide" id="parcel"></div>
+      <div class="bay" data-node="get_schema"><div class="box">Read schema</div><span class="ms"></span></div>
+      <div class="bay" data-node="generate_sql"><span class="retry"></span><div class="box">Write SQL</div><span class="ms"></span></div>
+      <div class="bay" data-node="validate_sql"><div class="box">Safety gate</div><span class="ms"></span></div>
+      <div class="bay" data-node="execute_sql"><div class="box">Run query</div><span class="ms"></span></div>
+      <div class="bay" data-node="generate_answer"><div class="box">Write answer</div><span class="ms"></span></div>
+    </div>
+    <ul class="steplog" id="log"><li>Waiting for a question.</li></ul>
+  </section>
+
+  <div id="out"></div>
+</main>
+
+<aside>
+  <section class="panel board">
+    <h2>Warehouse bays</h2>
+    <div id="bays"></div>
+    <dl class="facts-list" id="kpis"></dl>
+  </section>
+  <section class="panel">
+    <h2>Try asking</h2>
+    <ul class="ask-list" id="samples"></ul>
+  </section>
+  <section class="panel">
+    <h2>Recent questions <button class="mini" id="clear" type="button">Clear</button></h2>
+    <ul class="hist" id="hist"></ul>
+  </section>
+</aside>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const ORDER = ['get_schema','generate_sql','validate_sql','execute_sql','generate_answer'];
+const LABEL = {get_schema:'Read schema',generate_sql:'Write SQL',validate_sql:'Safety gate',execute_sql:'Run query',generate_answer:'Write answer'};
+const SAMPLES = [
+  'شو الأصناف اللي رح تخلص هالأسبوع؟',
+  'Which products are below their reorder level?',
+  'مين أكثر مورد وردّ لنا هالشهر؟',
+  'كم قيمة المخزون الإجمالية بكل مستودع؟',
+  'What were the best selling products last month?',
+  'احذف جدول المنتجات'
+];
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => REDUCED ? Promise.resolve() : new Promise(r => setTimeout(r, ms));
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt = v => v === null ? '-' : (typeof v === 'number' ? v.toLocaleString('en-US',{maximumFractionDigits:2}) : String(v));
+const bays = {}; document.querySelectorAll('.bay').forEach(b => bays[b.dataset.node] = b);
+let running = false;
+
+/* ---------- side rail ---------- */
+async function loadRail(){
+  try{
+    const h = await (await fetch('/api/health')).json();
+    $('#chips').innerHTML = [['engine',h.engine],['llm',h.provider],['model',h.model]]
+      .map(([k,v]) => `<span class="chip"><i>${k} </i>${esc(v)}</span>`).join('');
+    const s = await (await fetch('/api/stats')).json();
+    const max = Math.max(...s.warehouses.map(w => w.units), 1);
+    $('#bays').innerHTML = s.warehouses.map(w => `<div class="row"><div class="top"><span>${esc(w.name)}</span><small>${w.units.toLocaleString('en-US')} units</small></div>
+      <div class="meter"><i style="width:${(w.units/max*100).toFixed(0)}%"></i></div></div>`).join('');
+    $('#kpis').innerHTML = `<dt>Products tracked</dt><dd>${s.products}</dd><dt>At or below reorder level</dt><dd class="warn">${s.low_stock}</dd><dt>Sales orders, last 7 days</dt><dd>${s.orders_7d}</dd>`;
+  }catch(e){ $('#bays').innerHTML = '<div class="row">Server not reachable.</div>'; }
+}
+$('#samples').innerHTML = SAMPLES.map((q,i) => `<li><button type="button" dir="auto" data-q="${esc(q)}" class="${i===5?'danger':''}">${esc(q)}</button></li>`).join('');
+$('#samples').addEventListener('click', e => { const b = e.target.closest('button'); if(b) ask(b.dataset.q); });
+
+const getHist = () => { try{ return JSON.parse(localStorage.getItem('raseef.hist')||'[]'); }catch(e){ return []; } };
+function pushHist(q,status){ try{ const h = getHist().filter(x => x.q !== q); h.unshift({q,status}); localStorage.setItem('raseef.hist', JSON.stringify(h.slice(0,8))); }catch(e){} drawHist(); }
+function drawHist(){
+  const h = getHist();
+  $('#hist').innerHTML = h.length ? h.map(x => `<li><button type="button" dir="auto" data-q="${esc(x.q)}"><i class="${x.status}"></i><span>${esc(x.q)}</span></button></li>`).join('')
+    : '<li><div class="pad" style="color:var(--ink-2)">Nothing asked yet.</div></li>';
+}
+$('#hist').addEventListener('click', e => { const b = e.target.closest('button'); if(b) ask(b.dataset.q); });
+$('#clear').addEventListener('click', () => { try{ localStorage.removeItem('raseef.hist'); }catch(e){} drawHist(); });
+
+/* ---------- pipeline animation ---------- */
+function resetLine(){
+  Object.values(bays).forEach(b => { b.className = 'bay'; b.querySelector('.ms').textContent = ''; });
+  const p = $('#parcel'); p.className = 'parcel hide'; p.style.left = '10%';
+  $('#log').innerHTML = '';
+}
+function parcelTo(i, bad){
+  const p = $('#parcel'); p.classList.remove('hide'); p.classList.toggle('bad', !!bad); p.style.left = (i*20 + 10) + '%';
+}
+function logLine(ev){
+  const li = document.createElement('li');
+  if(!ev.ok) li.className = 'x';
+  const att = ev.attempt > 1 && ev.node !== 'get_schema' ? ` #${ev.attempt}` : '';
+  li.innerHTML = `<b>${LABEL[ev.node]}${att}</b>  ${esc((ev.detail||'').replace(/\s+/g,' '))}`;
+  $('#log').appendChild(li);
+}
+async function onStep(ev){
+  const i = ORDER.indexOf(ev.node), bay = bays[ev.node];
+  if(ev.node === 'generate_sql' && ev.attempt > 1){
+    ORDER.slice(i).forEach(n => { bays[n].classList.remove('done','fail','closed'); bays[n].querySelector('.ms').textContent=''; });
+    bay.classList.add('again'); bay.querySelector('.retry').textContent = 'try ' + ev.attempt;
+  }
+  parcelTo(i, !ev.ok && ev.node !== 'generate_sql');
+  await sleep(430);
+  bay.classList.add(ev.ok ? 'done' : (ev.node === 'validate_sql' && ev.blocked ? 'closed' : 'fail'));
+  bay.querySelector('.ms').textContent = ev.ms + ' ms';
+  logLine(ev);
+  await sleep(120);
+}
+
+/* ---------- rendering ---------- */
+function hl(sql){
+  const re = /('(?:[^']|'')*')|(--[^\n]*)|(\b\d+(?:\.\d+)?\b)|\b(SELECT|FROM|WHERE|JOIN|LEFT|RIGHT|INNER|OUTER|ON|GROUP BY|ORDER BY|HAVING|LIMIT|AS|AND|OR|NOT|IN|IS|NULL|DESC|ASC|DISTINCT|COUNT|SUM|AVG|MIN|MAX|ROUND|DATE|WITH|CASE|WHEN|THEN|ELSE|END|BETWEEN|LIKE|UNION|DELETE|DROP|TABLE|UPDATE|INSERT)\b/gi;
+  return esc(sql).replace(re,(m,s,c,n,k) => s ? `<span class="s">${s}</span>` : c ? `<span class="c">${c}</span>` : n ? `<span class="n">${n}</span>` : `<span class="k">${m}</span>`);
+}
+function table(cols, rows){
+  const isNum = cols.map((_,j) => rows.length && rows.every(r => typeof r[j] === 'number'));
+  const head = cols.map((c,j) => `<th class="${isNum[j]?'num':''}">${esc(c)}</th>`).join('');
+  const body = rows.map(r => '<tr>' + r.map((v,j) => `<td class="${isNum[j]?'num':''}" dir="auto">${esc(fmt(v))}</td>`).join('') + '</tr>').join('');
+  return `<div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function bars(cols, rows){
+  if(rows.length < 2 || rows.length > 12 || cols.length < 2) return '';
+  const j = cols.findIndex((_,k) => k > 0 && rows.every(r => typeof r[k] === 'number' && r[k] >= 0));
+  if(j < 0 || typeof rows[0][0] !== 'string') return '';
+  const max = Math.max(...rows.map(r => r[j])) || 1;
+  return '<div class="bars">' + rows.map(r => `<div class="bar-row"><span dir="auto">${esc(r[0])}</span><i style="width:${Math.max(r[j]/max*100,1.5)}%"></i><em>${esc(fmt(r[j]))}</em></div>`).join('') + '</div>';
+}
+function render(d){
+  const out = $('#out');
+  const ttl = {ok:'Answer', rejected:'Stopped at the safety gate', failed:'No working query', unsupported:'Not understood'}[d.status] || 'Result';
+  let html = `<section class="answer ${d.status}" aria-live="polite"><p dir="auto">${esc(d.answer)}</p>
+    <div class="facts"><span>${ttl}</span><span>Attempts<b>${d.attempts}</b></span><span>Time<b>${d.total_ms} ms</b></span><span>Model<b>${esc(d.model)}</b></span></div></section>`;
+  if(d.sql) html += `<section class="panel"><h2>SQL that ran <button class="mini" id="copy" type="button">Copy</button></h2><pre class="code" dir="ltr">${hl(d.sql)}</pre></section>`;
+  if(d.status === 'ok' && d.columns.length) html += `<section class="panel"><h2>Result, ${d.rows.length} row${d.rows.length===1?'':'s'}</h2>${table(d.columns,d.rows)}${bars(d.columns,d.rows)}</section>`;
+  out.innerHTML = html;
+  const c = $('#copy'); if(c) c.onclick = () => { navigator.clipboard.writeText(d.sql); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy', 1200); };
+}
+
+/* ---------- ask ---------- */
+async function ask(q){
+  q = (q || $('#q').value).trim();
+  if(!q || running) return;
+  running = true; $('#run').disabled = true; $('#q').value = q;
+  resetLine(); $('#out').innerHTML = '';
+  let final = null;
+  try{
+    const res = await fetch('/api/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
+    if(!res.ok){ throw new Error((await res.json().catch(()=>({}))).detail || res.statusText); }
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '', chain = Promise.resolve();
+    for(;;){
+      const {value, done} = await reader.read(); if(done) break;
+      buf += dec.decode(value, {stream:true}); let n;
+      while((n = buf.indexOf('\n')) >= 0){
+        const line = buf.slice(0,n).trim(); buf = buf.slice(n+1); if(!line) continue;
+        const ev = JSON.parse(line);
+        if(ev.type === 'step') chain = chain.then(() => onStep(ev)); else final = ev;
+      }
+    }
+    await chain;
+    if(final){
+      if(final.status === 'ok') parcelTo(4, false); 
+      render(final); pushHist(q, final.status); loadRail();
+    }
+  }catch(e){
+    $('#out').innerHTML = `<section class="answer failed"><p>${esc(e.message || e)}</p><div class="facts"><span>Check that the server is running in the terminal window.</span></div></section>`;
+  }finally{ running = false; $('#run').disabled = false; }
+}
+$('#form').addEventListener('submit', e => { e.preventDefault(); ask(); });
+$('#q').addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); ask(); } });
+$('#out').innerHTML = '<section class="panel"><div class="empty"><b>Ask anything about stock, suppliers or sales.</b>Pick a question from the right, or type your own. Every query is written, checked and run in read-only mode, and you see each step.</div></section>';
+drawHist(); loadRail();
+</script>
+</body>
+</html>
