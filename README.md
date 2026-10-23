@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Raseef (رصيف) - Warehouse SQL Agent
 
 Ask a warehouse database questions in **Arabic or English**. A LangGraph agent writes the SQL, checks it,
@@ -79,3 +80,6 @@ docker build -t raseef . && docker run -p 8000:8000 --env-file .env raseef
 ```
 
 Data is synthetic and generated locally. No real company data is used.
+=======
+# raseef-warehouse-agent
+>>>>>>> 8f4acb25e2f872705b3ef975f9a28f8132669806
