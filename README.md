@@ -1,5 +1,5 @@
 <<<<<<< HEAD
-# Raseef (رصيف) - Warehouse SQL Agent
+# Raseef - Warehouse SQL Agent
 
 Ask a warehouse database questions in **Arabic or English**. A LangGraph agent writes the SQL, checks it,
 runs it read-only, repairs its own mistakes, and answers in your language. You watch every step on a live
